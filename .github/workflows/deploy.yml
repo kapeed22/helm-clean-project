@@ -13,6 +13,10 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Added explicit permissions to push containers to GHCR
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -41,6 +45,10 @@ jobs:
   deploy-helm:
     needs: build-and-push
     runs-on: ubuntu-latest
+    # Added explicit permissions for AWS OIDC authentication
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -56,7 +64,6 @@ jobs:
           ENV_NAME="${{ github.event.inputs.target_env || 'dev' }}"
           IMAGE_TAG="${{ github.sha }}"
 
-          # Execute Helm Commands remotely on EC2 Master Node
           aws ssm send-command \
             --instance-ids "${{ secrets.EC2_MASTER_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
