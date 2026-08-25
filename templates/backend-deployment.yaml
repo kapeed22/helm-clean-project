@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: {{ .Values.environment }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: {{ .Values.backend.image }}:{{ .Values.imageTag }}
+          env:
+            - name: PORT
+              value: "{{ .Values.backend.port }}"
+            - name: DB_HOST
+              value: "postgres-service"
+            - name: DB_USER
+              value: {{ .Values.postgres.user }}
+            - name: DB_PASSWORD
+              value: {{ .Values.postgres.password }}
+            - name: DB_NAME
+              value: {{ .Values.postgres.dbName }}
+            - name: REDIS_HOST
+              value: "redis-service"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: JWT_SECRET
+              value: "myjwtsecretkey"
+          ports:
+            - containerPort: {{ .Values.backend.port }}
