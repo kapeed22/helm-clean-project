@@ -1,0 +1,5 @@
+environment: dev
+frontend:
+  nodePort: 30080
+postgres:
+  hostPath: /mnt/data/dev
