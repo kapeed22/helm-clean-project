@@ -1,0 +1,5 @@
+environment: prod
+frontend:
+  nodePort: 30082
+postgres:
+  hostPath: /mnt/data/prod
