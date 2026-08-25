@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.environment }}-postgres-pv
+spec:
+  capacity:
+    storage: {{ .Values.postgres.storageSize }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: {{ .Values.postgres.hostPath }}
