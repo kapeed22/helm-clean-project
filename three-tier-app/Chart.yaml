@@ -1,0 +1,6 @@
+apiVersion: v2
+name: three-tier-app
+description: Lightweight 3-tier auth app (Frontend, Backend, Redis, Postgres)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
