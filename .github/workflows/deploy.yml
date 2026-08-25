@@ -9,6 +9,7 @@ on:
         description: 'Choose target environment (dev, test, prod)'
         required: true
         default: 'dev'
+
 permissions:
   contents: read
   packages: write
@@ -57,17 +58,49 @@ jobs:
 
       - name: Deploy Selected Helm Environment via AWS SSM
         run: |
-          ENV_NAME="${{ github.event.inputs.target_env || 'dev' }}"
+          # 1. Determine environment dynamically
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENV_NAME="${{ github.event.inputs.target_env }}"
+          else
+            ENV_NAME="dev"
+          fi
+
           IMAGE_TAG="${{ github.sha }}"
 
-          # Execute git clone/pull on EC2 first, then run Helm
-          aws ssm send-command \
+          # 2. Send command and capture Command ID
+          COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_MASTER_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters commands="[
-              'mkdir -p /home/ubuntu/app && cd /home/ubuntu/app',
-              'if [ ! -d .git ]; then git clone https://github.com/${{ github.repository }}.git .; else git fetch --all && git reset --hard origin/main; fi',
-              'mkdir -p /mnt/data/${ENV_NAME} && chmod -R 777 /mnt/data',
-              'kubectl create ns ${ENV_NAME} --dry-run=client -o yaml | kubectl apply -f -',
-              'helm upgrade --install ${ENV_NAME}-release ./three-tier-app -f ./three-tier-app/values-${ENV_NAME}.yaml --set imageTag=${IMAGE_TAG} -n ${ENV_NAME}'
-            ]"
+            --parameters commands='[
+              "export KUBECONFIG=/etc/kubernetes/admin.conf",
+              "cd /home/ubuntu/app || exit 1",
+              "git fetch --all && git reset --hard origin/main",
+              "mkdir -p /mnt/data/'"${ENV_NAME}"' && chmod -R 777 /mnt/data",
+              "helm upgrade --install '"${ENV_NAME}"'-release ./three-tier-app -f ./three-tier-app/values-'"${ENV_NAME}"'.yaml --set imageTag='"${IMAGE_TAG}"' -n '"${ENV_NAME}"' --create-namespace"
+            ]' \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          # 3. Wait for execution and fail GitHub Actions if the script fails on EC2
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ secrets.EC2_MASTER_INSTANCE_ID }}"
+
+          # 4. Check exit code
+          STATUS=$(aws ssm list-command-invocations \
+            --command-id "$COMMAND_ID" \
+            --details \
+            --query "CommandInvocations[0].Status" \
+            --output text)
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "::error::SSM Command failed with status: $STATUS"
+            aws ssm list-command-invocations \
+              --command-id "$COMMAND_ID" \
+              --details \
+              --query "CommandInvocations[0].CommandPlugins[0].Output" \
+              --output text
+            exit 1
+          fi
