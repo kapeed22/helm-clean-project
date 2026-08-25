@@ -9,14 +9,14 @@ on:
         description: 'Choose target environment (dev, test, prod)'
         required: true
         default: 'dev'
+permissions:
+  contents: read
+  packages: write
+  id-token: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    # Added explicit permissions to push containers to GHCR
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -45,10 +45,6 @@ jobs:
   deploy-helm:
     needs: build-and-push
     runs-on: ubuntu-latest
-    # Added explicit permissions for AWS OIDC authentication
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
