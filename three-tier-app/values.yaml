@@ -1,0 +1,25 @@
+environment: dev
+imageTag: "latest"
+
+replicaCount: 1
+
+frontend:
+  image: ghcr.io/kapeed22/frontend
+  nodePort: 30080
+
+backend:
+  image: ghcr.io/kapeed22/backend
+  port: 5000
+
+redis:
+  image: redis:7-alpine
+  port: 6379
+
+postgres:
+  image: postgres:15-alpine
+  port: 5432
+  dbName: authdb
+  user: postgres
+  password: supersecretpassword
+  storageSize: 1Gi
+  hostPath: /mnt/data
