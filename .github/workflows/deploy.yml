@@ -60,12 +60,14 @@ jobs:
           ENV_NAME="${{ github.event.inputs.target_env || 'dev' }}"
           IMAGE_TAG="${{ github.sha }}"
 
+          # Execute git clone/pull on EC2 first, then run Helm
           aws ssm send-command \
             --instance-ids "${{ secrets.EC2_MASTER_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
             --parameters commands="[
-              'mkdir -p /mnt/data/${ENV_NAME}',
-              'chmod -R 777 /mnt/data',
+              'mkdir -p /home/ubuntu/app && cd /home/ubuntu/app',
+              'if [ ! -d .git ]; then git clone https://github.com/${{ github.repository }}.git .; else git fetch --all && git reset --hard origin/main; fi',
+              'mkdir -p /mnt/data/${ENV_NAME} && chmod -R 777 /mnt/data',
               'kubectl create ns ${ENV_NAME} --dry-run=client -o yaml | kubectl apply -f -',
               'helm upgrade --install ${ENV_NAME}-release ./three-tier-app -f ./three-tier-app/values-${ENV_NAME}.yaml --set imageTag=${IMAGE_TAG} -n ${ENV_NAME}'
             ]"
