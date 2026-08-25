@@ -1,0 +1,35 @@
+name: Nuke and Cleanup Kubernetes Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Select environment to completely wipe (dev, test, prod, or ALL)'
+        required: true
+        default: 'dev'
+
+jobs:
+  nuke-cluster-resources:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Execute Complete Teardown Command
+        run: |
+          TARGET="${{ github.event.inputs.target_env }}"
+          
+          aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_MASTER_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --parameters commands="[
+              'if [ \"$TARGET\" = \"ALL\" ]; then ENVS=\"dev test prod\"; else ENVS=\"$TARGET\"; fi',
+              'for env in \$ENVS; do helm uninstall \${env}-release -n \${env} || true; done',
+              'for env in \$ENVS; do kubectl delete ns \${env} --force --grace-period=0 || true; done',
+              'kubectl delete pv --all || true',
+              'sudo rm -rf /mnt/data/*',
+              'crictl rmi --prune || true'
+            ]"
