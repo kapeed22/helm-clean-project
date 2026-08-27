@@ -1,5 +1,5 @@
 environment: dev
-imageTag: "latest"
+imageTag: ""
 
 replicaCount: 1
 
