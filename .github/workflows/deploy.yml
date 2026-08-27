@@ -76,7 +76,7 @@ jobs:
               "cd /home/ubuntu/app || exit 1",
               "git fetch --all && git reset --hard origin/main",
               "mkdir -p /mnt/data/'"${ENV_NAME}"' && chmod -R 777 /mnt/data",
-              "helm upgrade --install '"${ENV_NAME}"'-release ./three-tier-app -f ./three-tier-app/values-'"${ENV_NAME}"'.yaml --set imageTag='"${IMAGE_TAG}"' -n '"${ENV_NAME}"' --create-namespace"
+              "helm upgrade --install '"${ENV_NAME}"'-release ./three-tier-app -f ./three-tier-app/values-'"${ENV_NAME}"'.yaml --set imageTag='"${IMAGE_TAG}"' --set frontend.tag='"${IMAGE_TAG}"' --set backend.tag='"${IMAGE_TAG}"' -n '"${ENV_NAME}"' --create-namespace"
             ]' \
             --query "Command.CommandId" \
             --output text)
