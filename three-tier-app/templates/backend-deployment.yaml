@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: "{{ .Values.backend.image }}:{{ default 'latest' .Values.imageTag }}"
+          image: "{{ .Values.backend.image }}:{{ default "latest" .Values.imageTag }}"
           env:
             - name: PORT
               value: "{{ .Values.backend.port }}"
