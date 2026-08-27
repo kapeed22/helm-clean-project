@@ -15,8 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: "ghcr.io/{{ .Values.image.repositoryOwner }}/backend:{{ default 'latest' .Values.imageTag }}"
-          env:
+          image: "{{ .Values.backend.image }}:{{ default "latest" .Values.imageTag }}"
             - name: PORT
               value: "{{ .Values.backend.port }}"
             - name: DB_HOST
