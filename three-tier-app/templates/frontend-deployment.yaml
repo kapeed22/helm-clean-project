@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: "{{ .Values.frontend.image }}:{{ .Values.imageTag | default 'latest' }}"
+          image: "{{ .Values.frontend.image }}:{{ default 'latest' .Values.imageTag }}"
           env:
             - name: REACT_APP_BACKEND_URL
               value: "http://backend-service:5000"
