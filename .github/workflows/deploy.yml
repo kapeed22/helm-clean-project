@@ -34,14 +34,18 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/frontend:latest
 
       - name: Build and Push Backend Image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/backend:${{ github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/backend:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/backend:latest
 
   deploy-helm:
     needs: build-and-push
@@ -67,7 +71,7 @@ jobs:
 
           IMAGE_TAG="${{ github.sha }}"
 
-          # 2. Send command and capture Command ID
+          # 2. Send command via SSM
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "${{ secrets.EC2_MASTER_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
@@ -76,19 +80,19 @@ jobs:
               "cd /home/ubuntu/app || exit 1",
               "git fetch --all && git reset --hard origin/main",
               "mkdir -p /mnt/data/'"${ENV_NAME}"' && chmod -R 777 /mnt/data",
-              "helm upgrade --install '"${ENV_NAME}"'-release ./three-tier-app -f ./three-tier-app/values-'"${ENV_NAME}"'.yaml --set imageTag='"${IMAGE_TAG}"' --set frontend.tag='"${IMAGE_TAG}"' --set backend.tag='"${IMAGE_TAG}"' -n '"${ENV_NAME}"' --create-namespace"
+              "helm upgrade --install '"${ENV_NAME}"'-release ./three-tier-app -f ./three-tier-app/values-'"${ENV_NAME}"'.yaml --set imageTag='"${IMAGE_TAG}"' -n '"${ENV_NAME}"' --create-namespace"
             ]' \
             --query "Command.CommandId" \
             --output text)
 
           echo "SSM Command ID: $COMMAND_ID"
 
-          # 3. Wait for execution and fail GitHub Actions if the script fails on EC2
+          # 3. Wait for execution
           aws ssm wait command-executed \
             --command-id "$COMMAND_ID" \
             --instance-id "${{ secrets.EC2_MASTER_INSTANCE_ID }}"
 
-          # 4. Check exit code
+          # 4. Validate execution status
           STATUS=$(aws ssm list-command-invocations \
             --command-id "$COMMAND_ID" \
             --details \
